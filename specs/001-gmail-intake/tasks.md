@@ -15,11 +15,11 @@
 
 **Purpose**: Create directory structure and configuration files. No source code yet.
 
-- [ ] T001 Create directory tree: `src/gmail_intake/`, `tests/unit/`, `tests/integration/`, `tests/contract/`, `data/` — run `mkdir -p` from repo root
-- [ ] T002 Create `pyproject.toml` at repo root with `[project]` metadata, `[project.dependencies]` (fastmcp≥2.0, google-api-python-client≥2.130, google-auth-oauthlib≥1.2, google-auth-httplib2≥0.2, google-generativeai≥0.8, portalocker≥2.8), and `[project.optional-dependencies] dev = [pytest≥8.0, pytest-asyncio]`; add `[tool.pytest.ini_options]` with `asyncio_mode = "auto"` and `testpaths = ["tests"]`
-- [ ] T003 Create `.env.example` at repo root with four entries: `GMAIL_CREDENTIALS_PATH=`, `GEMINI_API_KEY=`, `STATE_STORE_PATH=./data/processed_ids.json`, `MAX_MESSAGES_PER_POLL=50`
-- [ ] T004 [P] Verify `.gitignore` at repo root contains: `credentials.json`, `credentials.json.json`, `token.json`, `.env`, `data/processed_ids.json`, `data/*.lock`, `data/*.tmp` — add any missing entries
-- [ ] T005 [P] Create `data/.gitkeep` (empty file so the `data/` directory is tracked by git; `processed_ids.json` itself is gitignored)
+- [x] T001 Create directory tree: `src/gmail_intake/`, `tests/unit/`, `tests/integration/`, `tests/contract/`, `data/` — run `mkdir -p` from repo root
+- [x] T002 Create `pyproject.toml` at repo root with `[project]` metadata, `[project.dependencies]` (fastmcp≥2.0, google-api-python-client≥2.130, google-auth-oauthlib≥1.2, google-auth-httplib2≥0.2, google-generativeai≥0.8, portalocker≥2.8), and `[project.optional-dependencies] dev = [pytest≥8.0, pytest-asyncio]`; add `[tool.pytest.ini_options]` with `asyncio_mode = "auto"` and `testpaths = ["tests"]`
+- [x] T003 Create `.env.example` at repo root with four entries: `GMAIL_CREDENTIALS_PATH=`, `GEMINI_API_KEY=`, `STATE_STORE_PATH=./data/processed_ids.json`, `MAX_MESSAGES_PER_POLL=50`
+- [x] T004 [P] Verify `.gitignore` at repo root contains: `credentials.json`, `credentials.json.json`, `token.json`, `.env`, `data/processed_ids.json`, `data/*.lock`, `data/*.tmp` — add any missing entries
+- [x] T005 [P] Create `data/.gitkeep` (empty file so the `data/` directory is tracked by git; `processed_ids.json` itself is gitignored)
 
 **Checkpoint**: `pip install -e ".[dev]"` runs without errors.
 

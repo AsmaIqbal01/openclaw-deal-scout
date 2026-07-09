@@ -4,4 +4,16 @@ credentials.json.json
 token.json
 .env
 .env.*
+!.env.example
 *.log
+
+# State store and lock files
+data/processed_ids.json
+data/*.lock
+data/*.tmp
+
+# Python build artifacts
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
