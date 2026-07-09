@@ -31,8 +31,8 @@
 
 **⚠️ CRITICAL**: No module in Phases 3–5 can be written without this phase complete.
 
-- [ ] T006 Create `src/gmail_intake/__init__.py` as an empty package marker
-- [ ] T007 Create `src/gmail_intake/models.py` with five dataclasses exactly as specified in `specs/001-gmail-intake/data-model.md`:
+- [x] T006 Create `src/gmail_intake/__init__.py` as an empty package marker
+- [x] T007 Create `src/gmail_intake/models.py` with five dataclasses exactly as specified in `specs/001-gmail-intake/data-model.md`:
   - `DealPayload` (9 fields; `deal_category` as `Literal["lead","partnership_inquiry","vendor_offer","rfq","other"]`)
   - `ProcessedMessage` (3 fields; `outcome` as `Literal` of all 7 outcome values)
   - `ClassificationRequest` (5 fields; `target_segment` defaults to `"UK micro-business, fewer than 10 employees"`)
