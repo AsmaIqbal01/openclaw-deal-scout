@@ -1,9 +1,18 @@
+import dataclasses
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime
 
-from gmail_intake.models import ProcessedMessage, StateStore, StateStoreReadError
+import portalocker
+
+from gmail_intake.models import (
+    ConcurrentInvocationError,
+    ProcessedMessage,
+    StateStore,
+    StateStoreReadError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,3 +76,66 @@ def _is_valid_iso8601(value: str) -> bool:
         return True
     except (ValueError, AttributeError):
         return False
+
+
+def acquire_lock(path: str) -> portalocker.Lock:
+    """
+    Acquire an exclusive, non-blocking lock on f"{path}.lock".
+
+    Raises ConcurrentInvocationError immediately if another invocation
+    already holds the lock. Caller must release the returned lock in
+    a finally block.
+    """
+    lock_path = f"{path}.lock"
+    lock = portalocker.Lock(lock_path, mode="a", flags=portalocker.LOCK_EX | portalocker.LOCK_NB)
+    try:
+        lock.acquire()
+    except portalocker.exceptions.LockException as exc:
+        logger.warning("concurrent invocation detected — aborting")
+        raise ConcurrentInvocationError("concurrent invocation detected — aborting") from exc
+    return lock
+
+
+def _atomic_write(path: str, store: StateStore) -> None:
+    payload = {
+        "last_poll_time": store.last_poll_time,
+        "messages": [dataclasses.asdict(m) for m in store.messages],
+    }
+    dir_path = os.path.dirname(os.path.abspath(path)) or "."
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=dir_path, suffix=".tmp", delete=False, encoding="utf-8"
+        ) as fh:
+            json.dump(payload, fh, indent=2, ensure_ascii=False)
+            tmp_path = fh.name
+        os.replace(tmp_path, path)
+    except OSError as exc:
+        logger.error("state store write failed: %s", exc)
+
+
+def append_message(path: str, store: StateStore, entry: ProcessedMessage) -> None:
+    """
+    Append entry to store.messages in memory, then atomically persist the
+    full updated store to disk. Write failures are logged, not raised —
+    the message will simply be re-evaluated on the next run.
+    """
+    store.messages.append(entry)
+    _atomic_write(path, store)
+
+
+def update_poll_time(path: str, store: StateStore, ts: str) -> None:
+    """Set store.last_poll_time and atomically persist the store."""
+    store.last_poll_time = ts
+    _atomic_write(path, store)
+
+
+def check_store_size(path: str) -> None:
+    """Log a WARN once per cycle if the state store exceeds 50 MB."""
+    try:
+        size = os.path.getsize(path)
+    except OSError:
+        return  # File doesn't exist yet on first run — not an error
+    if size > _STORE_WARN_BYTES:
+        logger.warning(
+            "state store exceeding %.1f MB — archival recommended", size / (1024 * 1024)
+        )
