@@ -92,6 +92,12 @@ def poll_inbox(service, since_ts: str | None, max_messages: int) -> list[dict]:
         messages.sort(key=lambda m: int(m.get("internalDate", 0)))
         return messages[:max_messages]
 
-    except (HttpError, ConnectionError) as exc:
-        logger.warning("network failure mid-poll: %s", exc)
+    except HttpError as exc:
+        if exc.resp.status == 429:
+            logger.warning("Gmail rate limited mid-poll: %s", exc)
+        else:
+            logger.error("network failure mid-poll: %s", exc)
+        raise
+    except ConnectionError as exc:
+        logger.error("network failure mid-poll: %s", exc)
         raise

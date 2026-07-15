@@ -110,7 +110,7 @@ def _atomic_write(path: str, store: StateStore) -> None:
             tmp_path = fh.name
         os.replace(tmp_path, path)
     except OSError as exc:
-        logger.error("state store write failed: %s", exc)
+        logger.warning("state store write failed: %s", exc)
 
 
 def append_message(path: str, store: StateStore, entry: ProcessedMessage) -> None:
