@@ -2,9 +2,9 @@ import json
 import logging
 import time
 
-import google.api_core.exceptions
-import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from gmail_intake.models import (
     ClassificationError,
@@ -81,26 +81,30 @@ def classify(request: ClassificationRequest, api_key: str) -> ClassificationResp
     if all retries are exhausted. Any non-429 error raises ClassificationError
     immediately, with no retry.
     """
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=_MODEL_NAME,
-        generation_config=GenerationConfig(
-            response_mime_type="application/json",
-            response_schema=_RESPONSE_SCHEMA,
-        ),
-    )
+    client = genai.Client(api_key=api_key)
     prompt = _build_prompt(request)
+    config = genai_types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=_RESPONSE_SCHEMA,
+    )
 
     attempts = 1 + len(_RETRY_DELAYS_SECONDS)
     for attempt in range(attempts):
         try:
-            response = model.generate_content(prompt)
-        except google.api_core.exceptions.ResourceExhausted as exc:
-            if attempt < len(_RETRY_DELAYS_SECONDS):
-                time.sleep(_RETRY_DELAYS_SECONDS[attempt])
-                continue
-            logger.warning("classification rate-limited — skipped")
-            raise RateLimitExhaustedError("Gemini rate limit exhausted after 3 retries") from exc
+            response = client.models.generate_content(
+                model=_MODEL_NAME,
+                contents=prompt,
+                config=config,
+            )
+        except genai_errors.ClientError as exc:
+            if exc.code == 429:
+                if attempt < len(_RETRY_DELAYS_SECONDS):
+                    time.sleep(_RETRY_DELAYS_SECONDS[attempt])
+                    continue
+                logger.warning("classification rate-limited — skipped")
+                raise RateLimitExhaustedError("Gemini rate limit exhausted after 3 retries") from exc
+            logger.warning("classification failed: %d/%s", exc.code, exc)
+            raise ClassificationError(str(exc)) from exc
         except Exception as exc:
             logger.warning("classification failed: %s/%s", type(exc).__name__, exc)
             raise ClassificationError(str(exc)) from exc
