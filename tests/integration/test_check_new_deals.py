@@ -1,14 +1,14 @@
 """
-T026 — Integration tests for check_new_deals_handler().
+T026 + T027 — Integration tests for check_new_deals_handler().
 
 Unlike unit tests, these use a real on-disk state store and real lock,
 mocking only the external services (Gmail API, Gemini API). This validates
 idempotency, pre-filter, concurrent-invocation rejection, and crash-recovery
-behaviour across multiple handler invocations.
+behaviour across multiple handler invocations (including SC-005 mid-poll kill).
 """
 import os
 from contextlib import ExitStack
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -18,7 +18,7 @@ from gmail_intake.models import (
     StateStore,
 )
 from gmail_intake.server import check_new_deals_handler
-from gmail_intake.state_store import acquire_lock, append_message
+from gmail_intake.state_store import acquire_lock, append_message, read_store
 
 # ---------------------------------------------------------------------------
 # Shared test data
@@ -185,3 +185,49 @@ async def test_process_kill_recovery(tmp_path):
     assert result["processed_count"] == 1
     assert len(result["deals_extracted"]) == 1
     assert result["deals_extracted"][0]["gmail_message_id"] == "msg3"
+
+
+async def test_sc005_crash_recovery_no_duplicate(tmp_path):
+    """
+    SC-005: classify raises SystemExit mid-poll after successfully processing
+    msg1 (which has been appended to the state store). On the next invocation:
+      - msg1 is pre-filter skipped (already in state store)
+      - msg2 and msg3 are processed normally
+      - msg1 appears exactly once in the final state store (no duplicate)
+    """
+    store_path = str(tmp_path / "state.json")
+    messages = [{"id": "msg1"}, {"id": "msg2"}, {"id": "msg3"}]
+
+    # --- Crash run ---
+    # classify: returns a deal for msg1, then raises SystemExit for msg2
+    classify_crash = MagicMock(
+        side_effect=[_CLASSIFICATION_DEAL, SystemExit("simulated kill")]
+    )
+
+    with _patches(store_path, messages) as stack:
+        stack.enter_context(patch("gmail_intake.server.classify", new=classify_crash))
+        with pytest.raises(SystemExit):
+            await check_new_deals_handler()
+
+    # msg1 must be persisted — it was appended before the kill
+    mid_state = read_store(store_path)
+    assert any(m.gmail_message_id == "msg1" for m in mid_state.messages)
+
+    # --- Recovery run ---
+    classify_recovery = MagicMock(return_value=_CLASSIFICATION_DEAL)
+
+    with _patches(store_path, messages) as stack:
+        stack.enter_context(patch("gmail_intake.server.classify", new=classify_recovery))
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "ok"
+    # Only msg2 and msg3 reached classify — msg1 was pre-filtered
+    assert classify_recovery.call_count == 2
+    assert result["processed_count"] == 2
+    result_ids = {d["gmail_message_id"] for d in result["deals_extracted"]}
+    assert result_ids == {"msg2", "msg3"}
+
+    # No duplicate entry for msg1 in final state store
+    final_state = read_store(store_path)
+    msg1_entries = [m for m in final_state.messages if m.gmail_message_id == "msg1"]
+    assert len(msg1_entries) == 1
