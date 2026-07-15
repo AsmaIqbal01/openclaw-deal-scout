@@ -27,8 +27,10 @@ _SENTENCE_END = re.compile(r"(?<![.!?])[.!?](?=\s|$)")
 def split_sentences(text: str) -> list[str]:
     """Split text into sentences, excluding title abbreviations, acronyms, initials."""
     protected = _NON_SENTENCE_DOT.sub(lambda m: m.group().replace(".", "\x00"), text)
-    parts = _SENTENCE_END.split(protected)
-    return [p.replace("\x00", ".").strip() for p in parts if p.strip()]
+    # Insert a split marker AFTER each sentence-ending punctuation so the
+    # punctuation is preserved in the resulting sentence strings.
+    marked = _SENTENCE_END.sub(lambda m: m.group() + "\x01", protected)
+    return [p.replace("\x00", ".").strip() for p in marked.split("\x01") if p.strip()]
 
 
 def truncate_summary(text: str, max_sentences: int = 2, max_chars: int = 500) -> str:
