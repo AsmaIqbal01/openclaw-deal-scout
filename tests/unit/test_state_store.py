@@ -1,10 +1,11 @@
 """
-T018 — Unit tests for gmail_intake.state_store.
+T018 + T025 — Unit tests for gmail_intake.state_store.
 
 Covers:
   - read_store: missing file, corrupted JSON, malformed last_poll_time
   - acquire_lock: concurrent invocation conflict
   - append_message: atomic write with no leftover .tmp file
+  - T025: crash-recovery (.tmp leftover ignored), already_processed set identity
 """
 import json
 import os
@@ -93,3 +94,87 @@ def test_append_message_atomic(tmp_path):
     # No leftover .tmp file in the same directory
     leftover = list(tmp_path.glob("*.tmp"))
     assert leftover == [], f"Unexpected .tmp files: {leftover}"
+
+
+# ---------------------------------------------------------------------------
+# T025 — crash-recovery and pre-filter
+# ---------------------------------------------------------------------------
+
+
+def test_append_message_no_tmp_on_success(tmp_path):
+    """After a successful append_message the temp file is always renamed away."""
+    store_path = str(tmp_path / "state.json")
+    store = StateStore(last_poll_time=None)
+    entry = ProcessedMessage(
+        gmail_message_id="msg-tmp-check",
+        processed_at="2026-07-10T12:00:00+00:00",
+        outcome="deal_extracted",
+    )
+
+    append_message(store_path, store, entry)
+
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_append_message_crash_recovery(tmp_path):
+    """
+    A leftover .tmp file from a previous crashed write does not corrupt read_store.
+
+    Scenario: the canonical store has one committed entry; a stale .tmp file
+    (different content) is present in the same directory. read_store must return
+    only the canonical committed state.
+    """
+    store_path = str(tmp_path / "state.json")
+    committed_entry = ProcessedMessage(
+        gmail_message_id="committed-msg",
+        processed_at="2026-07-10T12:00:00+00:00",
+        outcome="deal_extracted",
+    )
+
+    # Write the committed canonical state
+    store = StateStore(last_poll_time=None)
+    append_message(store_path, store, committed_entry)
+
+    # Simulate a crashed write: leave a .tmp file with different content
+    stale_tmp = tmp_path / "stale_write.tmp"
+    stale_tmp.write_text(
+        json.dumps({"last_poll_time": None, "messages": [
+            {"gmail_message_id": "ghost-msg",
+             "processed_at": "2026-07-11T00:00:00+00:00",
+             "outcome": "deal_extracted"},
+        ]}),
+        encoding="utf-8",
+    )
+
+    recovered = read_store(store_path)
+
+    assert len(recovered.messages) == 1
+    assert recovered.messages[0].gmail_message_id == "committed-msg"
+
+
+def test_read_store_already_processed_set(tmp_path):
+    """After two append_message calls the already_processed set contains exactly 2 IDs."""
+    store_path = str(tmp_path / "state.json")
+    store = StateStore(last_poll_time=None)
+
+    append_message(
+        store_path, store,
+        ProcessedMessage(
+            gmail_message_id="alpha",
+            processed_at="2026-07-10T10:00:00+00:00",
+            outcome="deal_extracted",
+        ),
+    )
+    append_message(
+        store_path, store,
+        ProcessedMessage(
+            gmail_message_id="beta",
+            processed_at="2026-07-10T11:00:00+00:00",
+            outcome="not_a_deal",
+        ),
+    )
+
+    fresh = read_store(store_path)
+    already_processed = {m.gmail_message_id for m in fresh.messages}
+
+    assert already_processed == {"alpha", "beta"}
