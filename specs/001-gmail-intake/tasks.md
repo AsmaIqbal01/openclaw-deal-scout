@@ -252,8 +252,8 @@
   11. State store read failure → `test_read_store_corrupted_json` (T018)
   12. State store write failure → `test_append_message_write_failure` (add to unit test)
   13. Concurrent invocation → `test_concurrent_invocation_rejected` (T026)
-- [ ] T032 Run `pytest tests/ -v --tb=short` and confirm all tests pass; fix any failures before marking tasks.md complete
-- [ ] T033 Run `python -m gmail_intake.server` and invoke `check_new_deals` via the MCP inspector or a direct `asyncio.run()` call against a test inbox; confirm `status:"ok"` returned with correct `deals_extracted` and state store updated
+- [x] T032 Run `pytest tests/ -v --tb=short` and confirm all tests pass; fix any failures before marking tasks.md complete
+- [x] T033 Run `python -m gmail_intake.server` and invoke `check_new_deals` via the MCP inspector or a direct `asyncio.run()` call against a test inbox; confirm `status:"ok"` returned with correct `deals_extracted` and state store updated
 
 ---
 
