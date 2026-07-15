@@ -6,6 +6,27 @@ field types defined in specs/001-gmail-intake/contracts/tool-contract.md.
 
 All tests mock the full pipeline so they exercise only the contract surface,
 not the individual pipeline steps (those are covered by unit tests).
+
+SC-004 Boundary Coverage Map (T031)
+─────────────────────────────────────────────────────────────────────────────
+ #  Boundary Condition            Test                                    Suite
+─────────────────────────────────────────────────────────────────────────────
+ 1  Credential failure            test_auth_error_returns_status_error    integration
+ 2  Gmail rate limit (429)        test_gmail_rate_limit_aborts_cycle      integration
+ 3  Classifier 429 exhausted      test_classify_429_exhausted             unit/test_classifier
+ 4  Classifier non-429 error      test_classify_non_429_no_retry          unit/test_classifier
+ 5  Schema validation failure     test_extract_payload_schema_error_      unit/test_extractor
+                                  missing_required
+ 6  Invalid internalDate          test_invalid_internal_date              integration
+ 7  Missing From header           test_missing_from_header                unit/test_extractor
+    Missing Subject header        test_missing_subject_header             unit/test_extractor
+ 8  Body absent skipped           test_body_absent_skipped                integration
+ 9  Network failure mid-poll      test_network_failure_mid_poll           integration
+10  Unhandled per-msg exception   test_unhandled_exception_continues      integration
+11  State store read failure      test_read_store_corrupted_json          unit/test_state_store
+12  State store write failure     test_append_message_write_failure       unit/test_state_store
+13  Concurrent invocation         test_concurrent_invocation_rejected     integration
+─────────────────────────────────────────────────────────────────────────────
 """
 import dataclasses
 import os

@@ -9,6 +9,7 @@ Covers:
 """
 import json
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -178,3 +179,26 @@ def test_read_store_already_processed_set(tmp_path):
     already_processed = {m.gmail_message_id for m in fresh.messages}
 
     assert already_processed == {"alpha", "beta"}
+
+
+# ---------------------------------------------------------------------------
+# T031 — SC-004 #12: state store write failure
+# ---------------------------------------------------------------------------
+
+
+def test_append_message_write_failure(tmp_path):
+    """SC-004 #12: OSError during atomic rename is swallowed; append_message does not raise."""
+    store_path = str(tmp_path / "state.json")
+    store = StateStore(last_poll_time=None)
+    entry = ProcessedMessage(
+        gmail_message_id="msg-fail",
+        processed_at="2026-07-10T12:00:00+00:00",
+        outcome="deal_extracted",
+    )
+
+    with patch("gmail_intake.state_store.os.replace", side_effect=OSError("disk full")):
+        # Must not raise — OSError is caught and logged as WARN
+        append_message(store_path, store, entry)
+
+    # Canonical store file must NOT exist (os.replace never completed)
+    assert not os.path.exists(store_path)

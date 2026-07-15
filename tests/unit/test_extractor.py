@@ -5,12 +5,14 @@ FR-011 sentence boundary test cases from specs/001-gmail-intake/research.md Deci
 import pytest
 
 from gmail_intake.extractor import (
+    extract_metadata,
     extract_payload,
     truncate_excerpt,
     truncate_summary,
 )
 from gmail_intake.models import (
     ClassificationResponse,
+    InvalidMetadataError,
     SchemaValidationError,
 )
 
@@ -137,3 +139,30 @@ def test_extract_payload_valid():
     assert payload.deal_category == "lead"
     assert payload.confidence_score == 0.9
     assert payload.raw_email_excerpt == "We are interested in your services."
+
+
+# ---------------------------------------------------------------------------
+# extract_metadata — SC-004 #7 missing header tests (T031)
+# ---------------------------------------------------------------------------
+
+
+def test_missing_from_header():
+    """SC-004 #7: absent From header raises InvalidMetadataError."""
+    msg = {
+        "id": "abc",
+        "internalDate": "1720000000000",
+        "payload": {"headers": [{"name": "Subject", "value": "Hello"}]},
+    }
+    with pytest.raises(InvalidMetadataError):
+        extract_metadata(msg)
+
+
+def test_missing_subject_header():
+    """SC-004 #7: absent Subject header raises InvalidMetadataError."""
+    msg = {
+        "id": "abc",
+        "internalDate": "1720000000000",
+        "payload": {"headers": [{"name": "From", "value": "vendor@example.com"}]},
+    }
+    with pytest.raises(InvalidMetadataError):
+        extract_metadata(msg)

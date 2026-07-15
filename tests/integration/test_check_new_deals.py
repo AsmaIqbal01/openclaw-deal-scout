@@ -12,8 +12,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from googleapiclient.errors import HttpError
+
 from gmail_intake.models import (
+    AuthError,
     ClassificationResponse,
+    InvalidMetadataError,
     ProcessedMessage,
     StateStore,
 )
@@ -231,3 +235,168 @@ async def test_sc005_crash_recovery_no_duplicate(tmp_path):
     final_state = read_store(store_path)
     msg1_entries = [m for m in final_state.messages if m.gmail_message_id == "msg1"]
     assert len(msg1_entries) == 1
+
+
+# ---------------------------------------------------------------------------
+# T031 — SC-004 boundary condition tests
+# ---------------------------------------------------------------------------
+
+
+async def test_auth_error_returns_status_error(tmp_path):
+    """SC-004 #1: build_service raises AuthError → status='error', no deals."""
+    store_path = str(tmp_path / "state.json")
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(
+            patch("gmail_intake.server.build_service",
+                  side_effect=AuthError("token expired"))
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "error"
+    assert result["deals_extracted"] == []
+
+
+async def test_gmail_rate_limit_aborts_cycle(tmp_path):
+    """SC-004 #2: poll_inbox raises HttpError(429) → cycle aborts, status='error'."""
+    store_path = str(tmp_path / "state.json")
+    mock_resp = MagicMock()
+    mock_resp.status = 429
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(patch("gmail_intake.server.build_service"))
+        stack.enter_context(
+            patch("gmail_intake.server.poll_inbox",
+                  side_effect=HttpError(mock_resp, b"Rate Limited"))
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "error"
+    assert result["deals_extracted"] == []
+
+
+async def test_invalid_internal_date(tmp_path):
+    """SC-004 #6: extract_metadata raises InvalidMetadataError → message skipped."""
+    store_path = str(tmp_path / "state.json")
+    messages = [{"id": "msg-bad-date"}]
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(patch("gmail_intake.server.build_service"))
+        stack.enter_context(
+            patch("gmail_intake.server.poll_inbox", return_value=messages)
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.extract_body", return_value="body text")
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.extract_metadata",
+                  side_effect=InvalidMetadataError("internalDate"))
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "ok"
+    assert result["skipped_count"] == 1
+    assert result["deals_extracted"] == []
+
+
+async def test_body_absent_skipped(tmp_path):
+    """SC-004 #8: extract_body returns None → message skipped, skipped_count=1."""
+    store_path = str(tmp_path / "state.json")
+    messages = [{"id": "msg-nobody"}]
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(patch("gmail_intake.server.build_service"))
+        stack.enter_context(
+            patch("gmail_intake.server.poll_inbox", return_value=messages)
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.extract_body", return_value=None)
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "ok"
+    assert result["skipped_count"] == 1
+    assert result["deals_extracted"] == []
+
+
+async def test_network_failure_mid_poll(tmp_path):
+    """SC-004 #9: poll_inbox raises ConnectionError → cycle aborts, status='error'."""
+    store_path = str(tmp_path / "state.json")
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(patch("gmail_intake.server.build_service"))
+        stack.enter_context(
+            patch("gmail_intake.server.poll_inbox",
+                  side_effect=ConnectionError("connection refused"))
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "error"
+    assert result["deals_extracted"] == []
+
+
+async def test_unhandled_exception_continues(tmp_path):
+    """
+    SC-004 #10: unhandled RuntimeError on msg-crash is caught by outer except Exception;
+    handler continues and processes msg-ok normally (1 deal extracted, skipped_count=1).
+    """
+    store_path = str(tmp_path / "state.json")
+    messages = [{"id": "msg-crash"}, {"id": "msg-ok"}]
+
+    def _extract_body_side_effect(msg):
+        if msg["id"] == "msg-crash":
+            raise RuntimeError("unexpected error")
+        return "good body"
+
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(os.environ, {
+            "GMAIL_CREDENTIALS_PATH": "/fake/creds.json",
+            "GEMINI_API_KEY": "fake-key",
+            "STATE_STORE_PATH": store_path,
+        }))
+        stack.enter_context(patch("gmail_intake.server.build_service"))
+        stack.enter_context(
+            patch("gmail_intake.server.poll_inbox", return_value=messages)
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.extract_body",
+                  side_effect=_extract_body_side_effect)
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.extract_metadata", side_effect=_metadata_for)
+        )
+        stack.enter_context(
+            patch("gmail_intake.server.classify", return_value=_CLASSIFICATION_DEAL)
+        )
+        result = await check_new_deals_handler()
+
+    assert result["status"] == "ok"
+    assert result["processed_count"] == 2
+    assert result["skipped_count"] == 1
+    assert len(result["deals_extracted"]) == 1
+    assert result["deals_extracted"][0]["gmail_message_id"] == "msg-ok"
