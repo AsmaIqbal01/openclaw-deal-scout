@@ -208,3 +208,10 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- Python 3.11+ (001-gmail-intake)
+- File-based JSON (`processed_ids.json`) — zero infrastructure, human-readable, survives reboots without a daemon (001-gmail-intake)
+
+## Recent Changes
+- 001-gmail-intake: Added Python 3.11+
