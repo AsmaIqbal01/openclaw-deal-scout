@@ -51,6 +51,8 @@ ProcessedMessageOutcome = Literal[
     "body_absent",
     "invalid_metadata",
     "classification_error",
+    "crm-pending",
+    "crm-logged",
 ]
 
 

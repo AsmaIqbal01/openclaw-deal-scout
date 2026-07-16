@@ -212,6 +212,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 ## Active Technologies
 - Python 3.11+ (001-gmail-intake)
 - File-based JSON (`processed_ids.json`) — zero infrastructure, human-readable, survives reboots without a daemon (001-gmail-intake)
+- Python 3.11+ (same as `001-gmail-intake`) (002-hubspot-crm-logger)
+- Shared `processed_ids.json` state store, extended with: (002-hubspot-crm-logger)
 
 ## Recent Changes
 - 001-gmail-intake: Added Python 3.11+
