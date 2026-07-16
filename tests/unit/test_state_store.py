@@ -202,3 +202,64 @@ def test_append_message_write_failure(tmp_path):
 
     # Canonical store file must NOT exist (os.replace never completed)
     assert not os.path.exists(store_path)
+
+
+# ---------------------------------------------------------------------------
+# T034: cross-feature — extra_fields and merge-write (US5)
+# ---------------------------------------------------------------------------
+
+
+def test_append_message_with_extra_fields_persists_9_payload_fields(tmp_path):
+    """append_message with extra_fields writes all 9 DealPayload fields into the entry."""
+    store_path = str(tmp_path / "state.json")
+    store = StateStore(last_poll_time=None)
+    entry = ProcessedMessage(
+        gmail_message_id="msg-extra",
+        processed_at="2026-07-10T12:00:00+00:00",
+        outcome="deal_extracted",
+    )
+    extra = {
+        "subject":           "Big contract opportunity",
+        "sender_email":      "alice@acme.com",
+        "sender_name":       "Alice Doe",
+        "received_at":       "2024-01-02T10:00:00Z",
+        "deal_category":     "rfp",
+        "confidence_score":  0.93,
+        "deal_summary":      "Acme wants a proposal.",
+        "status":            "deal_extracted",
+    }
+
+    append_message(store_path, store, entry, extra_fields=extra)
+
+    with open(store_path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    msg = data["messages"][0]
+    assert msg["gmail_message_id"] == "msg-extra"
+    assert msg["subject"] == "Big contract opportunity"
+    assert msg["confidence_score"] == 0.93
+    assert msg["deal_summary"] == "Acme wants a proposal."
+
+
+def test_atomic_write_preserves_consecutive_401_cycles_from_existing_json(tmp_path):
+    """gmail_intake _atomic_write must not clobber CRM-added top-level keys."""
+    from gmail_intake.state_store import _atomic_write
+
+    store_path = str(tmp_path / "state.json")
+    # Pre-populate the file with a CRM-added key
+    existing = {
+        "last_poll_time": None,
+        "messages": [],
+        "consecutive_401_cycles": 2,
+    }
+    (tmp_path / "state.json").write_text(json.dumps(existing))
+
+    # Simulate gmail_intake writing the store
+    store = StateStore(last_poll_time="2024-01-02T10:00:00Z")
+    _atomic_write(store_path, store)
+
+    with open(store_path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    # The CRM key must still be present
+    assert data.get("consecutive_401_cycles") == 2
