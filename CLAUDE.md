@@ -214,6 +214,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - File-based JSON (`processed_ids.json`) — zero infrastructure, human-readable, survives reboots without a daemon (001-gmail-intake)
 - Python 3.11+ (same as `001-gmail-intake`) (002-hubspot-crm-logger)
 - Shared `processed_ids.json` state store, extended with: (002-hubspot-crm-logger)
+- Python 3.12 (matches existing package venv) (004-pipeline-orchestration)
+- File-based JSON (`processed_ids.json`, path from `STATE_STORE_PATH`) — existing shared state store; `.pipeline.lock` in same directory; `pipeline.log` rotating file in same directory (or `PIPELINE_LOG_PATH`) (004-pipeline-orchestration)
 
 ## Recent Changes
 - 001-gmail-intake: Added Python 3.11+

@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenClaw Deal Scout Pipeline (one-shot cycle)
+After=network.target
+
+[Service]
+Type=oneshot
+User=%i
+WorkingDirectory=/home/%i/openclaw-deal-scout
+ExecStart=/home/%i/openclaw-deal-scout/.venv/bin/python -m pipeline_orchestrator
+EnvironmentFile=/home/%i/openclaw-deal-scout/.env
+Environment=SCHEDULER_MODE=systemd
+
+[Install]
+WantedBy=multi-user.target

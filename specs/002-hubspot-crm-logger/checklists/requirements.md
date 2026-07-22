@@ -42,3 +42,9 @@
 Validation iteration 1 — all items pass. No spec updates required.
 Rate limit numbers sourced from developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines (July 2026).
 SC-006 explicitly models 3 API calls per deal (contact search + contact upsert + deal create) to make the burst constraint testable.
+
+**Validation iteration 2 (2026-07-22)** — spec-scorer re-run (8 passes, this session):
+- Final score: 9.8/10 — PASS
+- Score path: 8.3 → 9.0 → 9.1 → 9.8
+- Key additions: ConsecutiveAuthFailureCounter full lifecycle (startup-reset, mixed-cycle rule); null/empty gmail_message_id edge case; crm-pending exception clause for invalid_gmail_message_id guard
+- All checklist items remain checked [x]. Spec ready for /sp.plan.
