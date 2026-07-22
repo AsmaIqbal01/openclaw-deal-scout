@@ -1,6 +1,6 @@
 [Unit]
 Description=OpenClaw Deal Scout — run every 15 minutes
-Requires=openclaw@%i.service
+Requires=openclaw.service
 
 [Timer]
 OnBootSec=1min

@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=oneshot
-User=asmaiqbal01
-WorkingDirectory=/home/asmaiqbal01/openclaw-deal-scout
+User=%i
+WorkingDirectory=/home/%i/openclaw-deal-scout
 ExecStart=/usr/bin/python3.12 -m pipeline_orchestrator
-EnvironmentFile=/home/asmaiqbal01/openclaw-deal-scout/.env
+EnvironmentFile=/home/%i/openclaw-deal-scout/.env
 Environment=SCHEDULER_MODE=systemd
 
 [Install]
