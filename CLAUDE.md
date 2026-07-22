@@ -216,6 +216,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - Shared `processed_ids.json` state store, extended with: (002-hubspot-crm-logger)
 - Python 3.12 (matches existing package venv) (004-pipeline-orchestration)
 - File-based JSON (`processed_ids.json`, path from `STATE_STORE_PATH`) — existing shared state store; `.pipeline.lock` in same directory; `pipeline.log` rotating file in same directory (or `PIPELINE_LOG_PATH`) (004-pipeline-orchestration)
+- Python 3.12 (matches existing venv) (005-mcp-dashboard)
+- Same `processed_ids.json` and `pipeline.log` as existing pipeline (read-only access from gateway) (005-mcp-dashboard)
 
 ## Recent Changes
 - 001-gmail-intake: Added Python 3.11+
