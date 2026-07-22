@@ -208,7 +208,7 @@ async def check_new_deals_handler() -> dict:
                     continue
 
                 deal_dict = dataclasses.asdict(payload)
-                deal_dict["status"] = "deal_extracted"
+                state_store_dict = {**deal_dict, "status": "deal_extracted"}
                 append_message(
                     state_store_path,
                     store,
@@ -217,7 +217,7 @@ async def check_new_deals_handler() -> dict:
                         processed_at=_utcnow_iso(),
                         outcome="deal_extracted",
                     ),
-                    extra_fields=deal_dict,
+                    extra_fields=state_store_dict,
                 )
                 deals_extracted.append(deal_dict)
 
