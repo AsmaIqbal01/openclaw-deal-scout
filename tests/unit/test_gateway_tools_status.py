@@ -215,7 +215,7 @@ class TestGetGatewayStatus:
     def _cfg(self):
         cfg = MagicMock()
         cfg.gateway_host = "127.0.0.1"
-        cfg.gateway_port = 18789
+        cfg.gateway_port = 18790
         return cfg
 
     def test_has_all_required_keys(self, monkeypatch):
@@ -255,7 +255,7 @@ class TestGetGatewayStatus:
         monkeypatch.setattr(_srv_mod, "_cycle_running", False)
         result = get_gateway_status(self._cfg())
         assert result["host"] == "127.0.0.1"
-        assert result["port"] == 18789
+        assert result["port"] == 18790
 
     def test_last_cycle_at_is_never_when_none(self, monkeypatch):
         monkeypatch.setattr(_srv_mod, "_gateway_start_time", time.time())

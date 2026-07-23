@@ -24,7 +24,7 @@ def load_gateway_config() -> GatewayConfig:
 
     gateway_host = os.environ.get("GATEWAY_HOST", "127.0.0.1").strip() or "127.0.0.1"
 
-    gateway_port_raw = os.environ.get("GATEWAY_PORT", "18789").strip()
+    gateway_port_raw = os.environ.get("GATEWAY_PORT", "18790").strip()
     try:
         gateway_port = int(gateway_port_raw)
     except ValueError:

@@ -134,7 +134,7 @@ _RUNNING_STATUS = {
     "uptime_seconds": 3620,
     "version": "0.1.0",
     "host": "127.0.0.1",
-    "port": 18789,
+    "port": 18790,
     "last_cycle_at": "2026-07-23T00:14:56Z",
     "cycle_running": False,
 }
@@ -145,7 +145,7 @@ class TestGatewayStatusCommand:
     def _cfg(self):
         cfg = MagicMock()
         cfg.gateway_host = "127.0.0.1"
-        cfg.gateway_port = 18789
+        cfg.gateway_port = 18790
         return cfg
 
     def test_exit_0_when_gateway_running(self, monkeypatch, capsys):
@@ -200,7 +200,7 @@ class TestGatewayStatusCommand:
                 cli_mod.main()
         out = capsys.readouterr().out
         assert "127.0.0.1" in out
-        assert "18789" in out
+        assert "18790" in out
 
     def test_stdout_contains_version(self, monkeypatch, capsys):
         monkeypatch.setattr(sys, "argv", ["openclaw", "gateway", "status"])
@@ -231,7 +231,7 @@ class TestDashboardCommand:
     def _cfg(self):
         cfg = MagicMock()
         cfg.gateway_host = "127.0.0.1"
-        cfg.gateway_port = 18789
+        cfg.gateway_port = 18790
         return cfg
 
     def test_exit_0_on_dashboard(self, monkeypatch):
@@ -255,7 +255,7 @@ class TestDashboardCommand:
         mock_open.assert_called_once()
         url = mock_open.call_args[0][0]
         assert "127.0.0.1" in url
-        assert "18789" in url
+        assert "18790" in url
 
     def test_stdout_contains_url(self, monkeypatch, capsys):
         monkeypatch.setattr(sys, "argv", ["openclaw", "dashboard"])
@@ -266,4 +266,4 @@ class TestDashboardCommand:
             with pytest.raises(SystemExit):
                 cli_mod.main()
         out = capsys.readouterr().out
-        assert "127.0.0.1:18789" in out
+        assert "127.0.0.1:18790" in out

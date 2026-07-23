@@ -68,10 +68,10 @@ def _format_gateway_running(status: dict) -> str:
 
 async def _call_status_async(host: str, port: int) -> dict:
     from fastmcp import Client
-    async with Client(f"http://{host}:{port}/mcp/") as c:
+    async with Client(f"http://{host}:{port}/mcp") as c:
         import json
         result = await c.call_tool("get_gateway_status", {})
-        return json.loads(result[0].text)
+        return json.loads(result.content[0].text)
 
 
 def _fetch_gateway_status(host: str, port: int) -> Optional[dict]:

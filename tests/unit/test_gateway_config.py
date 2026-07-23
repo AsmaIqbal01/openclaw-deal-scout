@@ -12,7 +12,7 @@ def test_defaults(monkeypatch):
         monkeypatch.setenv(k, v)
     cfg = load_gateway_config()
     assert cfg.gateway_host == "127.0.0.1"
-    assert cfg.gateway_port == 18789
+    assert cfg.gateway_port == 18790
 
 
 def test_gateway_host_override(monkeypatch):
