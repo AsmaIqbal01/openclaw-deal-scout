@@ -23,6 +23,9 @@ dev = [
     "pytest-asyncio",
 ]
 
+[project.scripts]
+openclaw = "openclaw_gateway.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
