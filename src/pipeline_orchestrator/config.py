@@ -77,10 +77,10 @@ def load_config() -> PipelineConfig:
     max_pending_retries = _int_ge("MAX_PENDING_RETRIES", 10, 1)
 
     scheduler_mode_raw = os.environ.get("SCHEDULER_MODE", "loop").strip().lower()
-    if scheduler_mode_raw not in ("loop", "systemd"):
+    if scheduler_mode_raw not in ("loop", "systemd", "gateway"):
         sys.exit(
             f"[pipeline_orchestrator] ERROR: SCHEDULER_MODE={scheduler_mode_raw!r} "
-            "must be 'loop' or 'systemd'"
+            "must be 'loop', 'systemd', or 'gateway'"
         )
 
     return PipelineConfig(

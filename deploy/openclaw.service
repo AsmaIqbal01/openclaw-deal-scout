@@ -1,14 +1,14 @@
 [Unit]
-Description=OpenClaw Deal Scout Pipeline (one-shot cycle)
+Description=OpenClaw Deal Scout Gateway (MCP orchestrator + HTTP server)
 After=network.target
 
 [Service]
-Type=oneshot
+Type=simple
 User=asmaiqbal01
 WorkingDirectory=/home/asmaiqbal01/openclaw-deal-scout
-ExecStart=/usr/bin/python3.12 -m pipeline_orchestrator
+ExecStart=/usr/bin/python3.12 -m openclaw_gateway
 EnvironmentFile=/home/asmaiqbal01/openclaw-deal-scout/.env
-Environment=SCHEDULER_MODE=systemd
+Environment=SCHEDULER_MODE=gateway
 
 [Install]
 WantedBy=multi-user.target
