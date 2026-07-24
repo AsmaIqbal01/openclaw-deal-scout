@@ -50,3 +50,21 @@ def get_deals(limit: int = 50, status: str = "all") -> dict:
 def get_quota_usage() -> dict:
     from openclaw_gateway.tools.pipeline import get_quota_usage as _impl
     return _impl()
+
+
+# Dashboard REST endpoints — thin HTTP adapter over the MCP tool implementations
+from openclaw_gateway.routes.api import (  # noqa: E402
+    serve_dashboard,
+    api_status,
+    api_cycles,
+    api_deals,
+    api_quota,
+    api_run_cycle,
+)
+
+mcp.custom_route("/", methods=["GET"])(serve_dashboard)
+mcp.custom_route("/api/status", methods=["GET"])(api_status)
+mcp.custom_route("/api/cycles", methods=["GET"])(api_cycles)
+mcp.custom_route("/api/deals", methods=["GET"])(api_deals)
+mcp.custom_route("/api/quota", methods=["GET"])(api_quota)
+mcp.custom_route("/api/run-cycle", methods=["POST"])(api_run_cycle)

@@ -218,6 +218,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - File-based JSON (`processed_ids.json`, path from `STATE_STORE_PATH`) — existing shared state store; `.pipeline.lock` in same directory; `pipeline.log` rotating file in same directory (or `PIPELINE_LOG_PATH`) (004-pipeline-orchestration)
 - Python 3.12 (matches existing venv) (005-mcp-dashboard)
 - Same `processed_ids.json` and `pipeline.log` as existing pipeline (read-only access from gateway) (005-mcp-dashboard)
+- Python 3.12 (gateway); HTML5 + ES6 + CSS (dashboard) + FastMCP 3.4.4 (custom routes via `@mcp.custom_route`); Starlette (underlying HTTP app, already a FastMCP transitive dep); `importlib.resources` (Python stdlib — package data file access) (006-web-dashboard)
+- No new storage. Reads from existing `processed_ids.json` (state store) and `pipeline.log` via the existing tool implementations. (006-web-dashboard)
 
 ## Recent Changes
 - 001-gmail-intake: Added Python 3.11+
