@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import os
@@ -143,7 +144,10 @@ def run_cycle(config: PipelineConfig, cycle_logger: CycleLogger) -> None:
                 "error_details": None,
             }
             try:
-                result1 = asyncio.run(check_new_deals_handler())
+                # asyncio.run() cannot be called from a running event loop (e.g. Uvicorn).
+                # Running in a thread gives it a clean loop whether or not a loop is active.
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as _pool:
+                    result1 = _pool.submit(asyncio.run, check_new_deals_handler()).result()
             except RateLimitExhaustedError:
                 logger.warning("step 1: RateLimitExhaustedError — quota exhausted")
                 errors.append("quota_exhausted")

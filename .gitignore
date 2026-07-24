@@ -11,6 +11,10 @@ token.json
 data/processed_ids.json
 data/*.lock
 data/*.tmp
+.pipeline.lock
+*.lock
+# Windows path artefacts (created when STATE_STORE_PATH is a bare Windows path)
+C:Users*
 
 # Python build artifacts
 *.egg-info/

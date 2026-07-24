@@ -1,6 +1,7 @@
 """REST handlers for the OpenClaw dashboard (/api/* and / endpoints)."""
 from __future__ import annotations
 
+import asyncio
 import importlib.resources as pkg_resources
 from datetime import datetime, timezone
 
@@ -100,7 +101,10 @@ async def api_run_cycle(request: Request) -> JSONResponse:
     try:
         from openclaw_gateway.tools.pipeline import run_cycle
 
-        result = run_cycle()
+        # run_cycle() is synchronous and long-running; offload to a thread so
+        # Uvicorn's event loop stays responsive to other requests during the cycle.
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, run_cycle)
         return _json_response(result)
     except Exception as exc:
         return _json_response(
