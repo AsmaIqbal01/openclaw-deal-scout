@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenClaw Dashboard</title>
+<style>
+/* ── CSS custom properties (light default / dark override) ── */
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --border: #dde1e7;
+  --text: #1a1a2e;
+  --text-muted: #5a6374;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --yellow: #d97706;
+  --yellow-bg: #fef3c7;
+  --grey: #6b7280;
+  --grey-bg: #f3f4f6;
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --green: #4ade80;
+    --green-bg: #14532d;
+    --red: #f87171;
+    --red-bg: #7f1d1d;
+    --yellow: #fbbf24;
+    --yellow-bg: #78350f;
+    --grey: #9ca3af;
+    --grey-bg: #1e293b;
+    --shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+}
+
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 12px; }
+a { color: var(--accent); }
+
+/* ── Layout ── */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-left h1 { font-size: 16px; font-weight: 700; }
+#last-updated { font-size: 12px; color: var(--text-muted); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+main { max-width: 1400px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; gap: 16px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+/* ── Cards ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+
+/* ── Badges ── */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+.badge-healthy { background: var(--green-bg); color: var(--green); }
+.badge-degraded { background: var(--red-bg); color: var(--red); }
+.badge-running { background: var(--yellow-bg); color: var(--yellow); animation: pulse 1.5s ease-in-out infinite; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+/* ── Status panel ── */
+.status-meta { display: flex; gap: 20px; flex-wrap: wrap; margin: 10px 0 14px; }
+.status-meta .label { font-size: 12px; color: var(--text-muted); }
+.status-meta .value { font-weight: 600; }
+#component-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.component-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 8px; border-radius: var(--radius); background: var(--grey-bg); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-pass { background: var(--green); }
+.dot-fail { background: var(--red); }
+
+/* ── Cycles panel ── */
+#cycles-panel { grid-column: span 1; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--grey-bg); }
+.empty-msg { color: var(--text-muted); font-style: italic; padding: 12px 0; text-align: center; }
+
+/* ── Deals panel ── */
+#deals-panel { grid-column: 1 / -1; }
+.deals-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+#deal-filter { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; font-size: 13px; cursor: pointer; }
+#deals-count { font-size: 13px; color: var(--text-muted); }
+.crm-logged, .notify-sent { color: var(--green); font-weight: 600; }
+.crm-pending, .notify-pending { color: var(--yellow); }
+.crm-failed, .notify-failed { color: var(--red); font-weight: 600; }
+.ts-cell { white-space: nowrap; color: var(--text-muted); font-size: 12px; }
+
+/* ── Quota panel ── */
+#quota-panel { grid-column: span 1; }
+.quota-numbers { display: flex; gap: 6px; align-items: baseline; margin-bottom: 8px; }
+.quota-used-num { font-size: 22px; font-weight: 700; }
+.quota-sep { color: var(--text-muted); }
+.quota-limit-num { font-size: 15px; color: var(--text-muted); }
+.quota-pct { font-size: 13px; color: var(--text-muted); margin-left: 4px; }
+#quota-bar-container { background: var(--border); border-radius: 99px; height: 8px; margin-bottom: 8px; overflow: hidden; }
+#quota-bar { height: 100%; border-radius: 99px; background: var(--green); transition: width .4s ease, background .4s ease; width: 0%; }
+#quota-bar.quota-warn { background: var(--yellow); }
+#quota-bar.quota-danger { background: var(--red); }
+.quota-cycles { font-size: 12px; color: var(--text-muted); }
+#quota-warning { margin-top: 10px; padding: 8px 12px; background: var(--yellow-bg); color: var(--yellow); border-radius: var(--radius); font-size: 12px; font-weight: 600; }
+
+/* ── Run Cycle button ── */
+#run-cycle-btn { padding: 7px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+#run-cycle-btn:hover:not(:disabled) { background: var(--accent-hover); }
+#run-cycle-btn:disabled { background: var(--grey); cursor: not-allowed; opacity: .7; }
+#cycle-result { font-size: 13px; padding: 6px 12px; border-radius: var(--radius); margin-top: 8px; display: none; }
+#cycle-result.result-ok { background: var(--green-bg); color: var(--green); }
+#cycle-result.result-busy { background: var(--yellow-bg); color: var(--yellow); }
+#cycle-result.result-error { background: var(--red-bg); color: var(--red); }
+
+/* ── Offline banner ── */
+#offline-banner { background: var(--red-bg); color: var(--red); padding: 8px 20px; font-size: 13px; font-weight: 600; text-align: center; display: none; }
+
+/* ── Errors label in cycles table ── */
+.err-label { font-size: 11px; background: var(--red-bg); color: var(--red); padding: 1px 5px; border-radius: 3px; margin: 1px 2px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div id="offline-banner">&#9888; Gateway offline &mdash; data may be stale. Retrying&hellip;</div>
+
+<header>
+  <div class="header-left">
+    <h1>&#129445; OpenClaw Dashboard</h1>
+    <span id="last-updated"></span>
+  </div>
+  <div class="header-right">
+    <button id="run-cycle-btn" onclick="runCycle()">Run Cycle</button>
+  </div>
+</header>
+<div id="cycle-result"></div>
+
+<main>
+
+  <!-- US1: Status Panel -->
+  <section id="status-panel" class="card">
+    <h2>Pipeline Status</h2>
+    <div id="health-badge" class="badge">&#8230;</div>
+    <div class="status-meta">
+      <div>
+        <div class="label">Uptime</div>
+        <div class="value" id="uptime">&mdash;</div>
+      </div>
+      <div>
+        <div class="label">Last Cycle</div>
+        <div class="value" id="last-cycle">&mdash;</div>
+      </div>
+      <div id="cycle-running-indicator" style="display:none">
+        <span class="badge badge-running">&#9679; Cycle Running</span>
+      </div>
+    </div>
+    <h2>Components</h2>
+    <div id="component-grid"></div>
+  </section>
+
+  <!-- US1: Recent Cycles Panel -->
+  <section id="cycles-panel" class="card">
+    <h2>Recent Cycles</h2>
+    <div class="table-wrap">
+      <table id="cycles-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Emails</th>
+            <th>CRM</th>
+            <th>Notified</th>
+            <th>Errors</th>
+          </tr>
+        </thead>
+        <tbody id="cycles-tbody">
+          <tr><td colspan="5" class="empty-msg">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- US4: Quota Panel -->
+  <section id="quota-panel" class="card">
+    <h2>Gemini Quota &mdash; Today</h2>
+    <div class="quota-numbers">
+      <span class="quota-used-num" id="quota-used">&#8230;</span>
+      <span class="quota-sep">/</span>
+      <span class="quota-limit-num" id="quota-limit">1500</span>
+      <span class="quota-pct" id="quota-pct"></span>
+    </div>
+    <div id="quota-bar-container"><div id="quota-bar"></div></div>
+    <div class="quota-cycles" id="quota-cycles"></div>
+    <div id="quota-warning" style="display:none">&#9888; Quota hit today &mdash; extraction skipped for some cycles</div>
+  </section>
+
+  <!-- US2: Deals Panel -->
+  <section id="deals-panel" class="card">
+    <h2>Detected Deals</h2>
+    <div class="deals-toolbar">
+      <select id="deal-filter" onchange="onFilterChange(event)">
+        <option value="all">All deals</option>
+        <option value="crm_pending">CRM pending</option>
+        <option value="crm_failed">CRM failed</option>
+        <option value="notify_pending">Notify pending</option>
+        <option value="notify_failed">Notify failed</option>
+        <option value="complete">Complete</option>
+      </select>
+      <span id="deals-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="deals-table">
+        <thead>
+          <tr>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th>CRM</th>
+            <th>Notified</th>
+            <th>Detected</th>
+          </tr>
+        </thead>
+        <tbody id="deals-tbody">
+          <tr><td colspan="5" class="empty-msg">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+let currentFilter = 'all';
+let _cycleRunning = false;
+let _pollTimer = null;
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+
+async function fetchJSON(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} from ${url}`);
+  return resp.json();
+}
+
+function showOffline(on) {
+  document.getElementById('offline-banner').style.display = on ? 'block' : 'none';
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+
+function humanUptime(seconds) {
+  if (seconds == null) return 'unknown';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function fmtTs(iso) {
+  if (!iso || iso === 'never') return 'Never';
+  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+}
+
+function updateTimestamp() {
+  document.getElementById('last-updated').textContent =
+    'Last updated: ' + new Date().toLocaleTimeString();
+}
+
+// ── US1: Status panel ─────────────────────────────────────────────────────────
+
+function renderStatus(data) {
+  const gw = data.gateway || {};
+  const health = data.health || {};
+
+  // Health badge
+  const badge = document.getElementById('health-badge');
+  const overall = health.overall || 'UNKNOWN';
+  badge.textContent = overall;
+  badge.className = 'badge ' + (overall === 'HEALTHY' ? 'badge-healthy' : 'badge-degraded');
+
+  // Meta
+  document.getElementById('uptime').textContent = humanUptime(gw.uptime_seconds);
+  document.getElementById('last-cycle').textContent = fmtTs(gw.last_cycle_at);
+
+  // Cycle running indicator
+  _cycleRunning = !!gw.cycle_running;
+  document.getElementById('cycle-running-indicator').style.display = _cycleRunning ? 'flex' : 'none';
+
+  // Run Cycle button state
+  const btn = document.getElementById('run-cycle-btn');
+  if (!btn._userTriggered) {
+    btn.disabled = _cycleRunning;
+    if (!_cycleRunning) btn.textContent = 'Run Cycle';
+  }
+
+  // Component grid
+  const grid = document.getElementById('component-grid');
+  grid.innerHTML = '';
+  (health.components || []).forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'component-item';
+    const dot = document.createElement('span');
+    dot.className = 'dot ' + (c.status === 'PASS' ? 'dot-pass' : 'dot-fail');
+    const name = document.createElement('span');
+    name.textContent = c.name.replace(/_/g, ' ');
+    el.appendChild(dot);
+    el.appendChild(name);
+    if (c.message) el.title = c.message;
+    grid.appendChild(el);
+  });
+}
+
+// ── US1: Cycles panel ─────────────────────────────────────────────────────────
+
+function renderCycles(data) {
+  const tbody = document.getElementById('cycles-tbody');
+  const cycles = (data && data.cycles) || [];
+  if (cycles.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No cycles recorded yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cycles.map(c => {
+    const errs = (c.errors || []).map(e => `<span class="err-label">${e}</span>`).join('') || '&mdash;';
+    return `<tr>
+      <td class="ts-cell">${fmtTs(c.ts)}</td>
+      <td>${c.emails_processed ?? 0}</td>
+      <td>${c.crm_logged ?? 0}</td>
+      <td>${c.notified ?? 0}</td>
+      <td>${errs}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── US2: Deals panel ──────────────────────────────────────────────────────────
+
+function renderDeals(data) {
+  const deals = (data && data.deals) || [];
+  const total = (data && data.total_deals) || 0;
+  document.getElementById('deals-count').textContent = `${total} deal(s)`;
+
+  const tbody = document.getElementById('deals-tbody');
+  if (deals.length === 0) {
+    tbody.innerHTML = '<tr id="no-deals-row"><td colspan="5" class="empty-msg">No deals found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = deals.map(d => {
+    const crmCls = `crm-${d.crm_status || 'pending'}`;
+    const notCls = `notify-${d.notify_status || 'pending'}`;
+    return `<tr>
+      <td>${esc(d.sender || '')}</td>
+      <td>${esc(d.subject || '')}</td>
+      <td class="${crmCls}">${d.crm_status || 'pending'}</td>
+      <td class="${notCls}">${d.notify_status || 'pending'}</td>
+      <td class="ts-cell">${fmtTs(d.ts)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function onFilterChange(event) {
+  currentFilter = event.target.value;
+  fetchJSON(`/api/deals?status=${currentFilter}&limit=50`)
+    .then(renderDeals)
+    .catch(() => {});
+}
+
+// ── US4: Quota panel ──────────────────────────────────────────────────────────
+
+function renderQuota(data) {
+  if (!data) return;
+  document.getElementById('quota-used').textContent = data.estimated_requests_today ?? '?';
+  document.getElementById('quota-limit').textContent = data.daily_free_tier_limit ?? 1500;
+  const pct = data.pct_used ?? 0;
+  document.getElementById('quota-pct').textContent = `(${pct.toFixed(1)}%)`;
+  const bar = document.getElementById('quota-bar');
+  bar.style.width = `${Math.min(100, pct)}%`;
+  bar.className = pct >= 90 ? 'quota-danger' : pct >= 75 ? 'quota-warn' : '';
+  const cycles = data.cycles_today ?? 0;
+  document.getElementById('quota-cycles').textContent = `${cycles} cycle(s) today`;
+  const warn = document.getElementById('quota-warning');
+  warn.style.display = data.has_quota_error_today ? 'block' : 'none';
+}
+
+// ── US3: Run Cycle button ─────────────────────────────────────────────────────
+
+async function runCycle() {
+  const btn = document.getElementById('run-cycle-btn');
+  const resultEl = document.getElementById('cycle-result');
+
+  btn.disabled = true;
+  btn._userTriggered = true;
+  btn.textContent = 'Running…';
+  resultEl.style.display = 'none';
+  resultEl.className = 'cycle-result';
+
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 90000);
+
+  try {
+    const data = await fetch('/api/run-cycle', {
+      method: 'POST',
+      signal: controller.signal,
+    }).then(r => r.json());
+    clearTimeout(timeoutId);
+
+    if (data.busy) {
+      showResult('result-busy', 'Pipeline busy — try again shortly.');
+    } else if (data.error) {
+      showResult('result-error', `Error: ${data.error}`);
+    } else {
+      showResult(
+        'result-ok',
+        `Done: ${data.emails_processed ?? 0} emails, ${data.crm_logged ?? 0} CRM, ${data.notified ?? 0} notified` +
+        ((data.errors && data.errors.length) ? ` — errors: ${data.errors.join(', ')}` : '')
+      );
+    }
+    await refresh();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (timedOut || err.name === 'AbortError') {
+      showResult('result-busy', 'Cycle still running — check pipeline.log for progress. Polling for completion…');
+      pollUntilIdle();
+      return;
+    }
+    showResult('result-error', `Network error: ${err.message}`);
+  } finally {
+    if (!timedOut) {
+      btn._userTriggered = false;
+      btn.disabled = false;
+      btn.textContent = 'Run Cycle';
+    }
+  }
+}
+
+function showResult(cls, msg) {
+  const el = document.getElementById('cycle-result');
+  el.className = cls;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function pollUntilIdle() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(async () => {
+    try {
+      const data = await fetchJSON('/api/status');
+      if (!data.gateway.cycle_running) {
+        clearInterval(_pollTimer);
+        _pollTimer = null;
+        const btn = document.getElementById('run-cycle-btn');
+        btn._userTriggered = false;
+        btn.disabled = false;
+        btn.textContent = 'Run Cycle';
+        await refresh();
+      }
+    } catch (_) {}
+  }, 2000);
+}
+
+// ── XSS helper ────────────────────────────────────────────────────────────────
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Main refresh ──────────────────────────────────────────────────────────────
+
+async function refresh() {
+  try {
+    const [status, cycles, deals, quota] = await Promise.all([
+      fetchJSON('/api/status'),
+      fetchJSON('/api/cycles?limit=20'),
+      fetchJSON(`/api/deals?status=${currentFilter}&limit=50`),
+      fetchJSON('/api/quota'),
+    ]);
+    showOffline(false);
+    renderStatus(status);
+    renderCycles(cycles);
+    renderDeals(deals);
+    renderQuota(quota);
+    updateTimestamp();
+  } catch (err) {
+    showOffline(true);
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  refresh();
+  setInterval(refresh, 60000);
+});
+</script>
+</body>
+</html>
