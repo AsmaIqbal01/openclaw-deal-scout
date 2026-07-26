@@ -130,6 +130,39 @@ tbody tr:hover { background: var(--grey-bg); }
 
 /* ── Errors label in cycles table ── */
 .err-label { font-size: 11px; background: var(--red-bg); color: var(--red); padding: 1px 5px; border-radius: 3px; margin: 1px 2px; display: inline-block; }
+
+/* ── Email queue panel ── */
+#email-queue-panel { grid-column: 1 / -1; }
+.email-status-scheduled { color: var(--yellow); font-weight: 600; }
+.email-status-approved { color: var(--accent); font-weight: 600; }
+.email-status-sent { color: var(--green); font-weight: 600; }
+.email-status-cancelled { color: var(--grey); }
+.email-status-failed { color: var(--red); font-weight: 600; }
+.email-actions { display: flex; gap: 6px; }
+.btn-approve { padding: 3px 10px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-approve:hover { background: var(--accent-hover); }
+.btn-cancel { padding: 3px 10px; background: var(--red-bg); color: var(--red); border: 1px solid var(--red); border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-cancel:hover { background: var(--red); color: #fff; }
+.btn-approve:disabled, .btn-cancel:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Audit history panel ── */
+#audit-panel { grid-column: 1 / -1; }
+details summary { cursor: pointer; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 4px 0; user-select: none; }
+details summary::-webkit-details-marker { color: var(--text-muted); }
+details[open] summary { margin-bottom: 12px; }
+.event-type-label { font-size: 11px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.ev-scheduled { background: var(--yellow-bg); color: var(--yellow); }
+.ev-approved { background: var(--grey-bg); color: var(--accent); }
+.ev-sent { background: var(--green-bg); color: var(--green); }
+.ev-cancelled { background: var(--grey-bg); color: var(--grey); }
+.ev-failed { background: var(--red-bg); color: var(--red); }
+.ev-no-recipient { background: var(--yellow-bg); color: var(--yellow); }
+.ev-duplicate-skipped { background: var(--grey-bg); color: var(--grey); }
+.ev-scheduler-error { background: var(--red-bg); color: var(--red); }
+.ev-recovered { background: var(--green-bg); color: var(--green); }
+.ev-recovery-warning { background: var(--yellow-bg); color: var(--yellow); }
+#audit-load-more { margin-top: 10px; padding: 5px 14px; background: var(--grey-bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; cursor: pointer; }
+#audit-load-more:hover { background: var(--border); }
 </style>
 </head>
 <body>
@@ -203,6 +236,63 @@ tbody tr:hover { background: var(--grey-bg); }
     <div id="quota-bar-container"><div id="quota-bar"></div></div>
     <div class="quota-cycles" id="quota-cycles"></div>
     <div id="quota-warning" style="display:none">&#9888; Quota hit today &mdash; extraction skipped for some cycles</div>
+  </section>
+
+  <!-- 007: Email Queue Panel -->
+  <section id="email-queue-panel" class="card">
+    <h2>Email Queue</h2>
+    <div class="deals-toolbar">
+      <select id="email-filter" onchange="onEmailFilterChange(event)">
+        <option value="all">All emails</option>
+        <option value="scheduled">Scheduled (pending approval)</option>
+        <option value="approved">Approved (awaiting dispatch)</option>
+        <option value="sent">Sent</option>
+        <option value="failed">Failed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <span id="emails-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="emails-table">
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Proposed Send</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="emails-tbody">
+          <tr><td colspan="6" class="empty-msg">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 007: Audit History Panel -->
+  <section id="audit-panel" class="card">
+    <details>
+      <summary>Email Audit History</summary>
+      <div class="table-wrap">
+        <table id="audit-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event</th>
+              <th>Recipient</th>
+              <th>Actor</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody">
+            <tr><td colspan="5" class="empty-msg">Loading&hellip;</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button id="audit-load-more" onclick="loadMoreAudit()" style="display:none">Load more</button>
+    </details>
   </section>
 
   <!-- US2: Deals Panel -->
@@ -471,6 +561,111 @@ function pollUntilIdle() {
   }, 2000);
 }
 
+// ── 007: Email queue panel ───────────────────────────────────────────────────
+
+let currentEmailFilter = 'all';
+
+function onEmailFilterChange(event) {
+  currentEmailFilter = event.target.value;
+  fetchJSON(`/api/emails?status=${currentEmailFilter}&limit=50`)
+    .then(renderEmails)
+    .catch(() => {});
+}
+
+function renderEmails(data) {
+  const emails = (data && data.emails) || [];
+  const total = (data && data.total) || 0;
+  document.getElementById('emails-count').textContent = `${total} email(s)`;
+
+  const tbody = document.getElementById('emails-tbody');
+  if (emails.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">No emails found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = emails.map(e => {
+    const statusCls = `email-status-${e.status}`;
+    const canApprove = e.status === 'scheduled';
+    const canCancel = e.status === 'scheduled' || e.status === 'approved';
+    const actions = `<div class="email-actions">
+      <button class="btn-approve" ${canApprove ? '' : 'disabled'}
+        onclick="emailAction('${esc(e.id)}', 'approve')">Approve</button>
+      <button class="btn-cancel" ${canCancel ? '' : 'disabled'}
+        onclick="emailAction('${esc(e.id)}', 'cancel')">Cancel</button>
+    </div>`;
+    return `<tr>
+      <td>${esc(e.recipient_email || '')}</td>
+      <td title="${esc(e.subject || '')}">${esc((e.subject || '').slice(0, 60))}${e.subject && e.subject.length > 60 ? '&hellip;' : ''}</td>
+      <td class="${statusCls}">${esc(e.status)}</td>
+      <td class="ts-cell">${fmtTs(e.proposed_send_at)}</td>
+      <td class="ts-cell">${fmtTs(e.created_at)}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function emailAction(emailId, action) {
+  try {
+    const resp = await fetch(`/api/emails/${emailId}/${action}`, { method: 'POST' });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      alert(`${action} failed: ${err.error || resp.status}`);
+    }
+    fetchJSON(`/api/emails?status=${currentEmailFilter}&limit=50`).then(renderEmails).catch(() => {});
+    fetchJSON('/api/email-events?limit=50').then(renderAudit).catch(() => {});
+  } catch (err) {
+    alert(`Network error: ${err.message}`);
+  }
+}
+
+// ── 007: Audit history panel ──────────────────────────────────────────────────
+
+let _auditOffset = 0;
+const _AUDIT_PAGE = 50;
+
+function renderAudit(data) {
+  const events = (data && data.events) || [];
+  const total = (data && data.total) || 0;
+  _auditOffset = 0;
+
+  const tbody = document.getElementById('audit-tbody');
+  if (events.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No audit events yet</td></tr>';
+    document.getElementById('audit-load-more').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = _auditRows(events);
+  document.getElementById('audit-load-more').style.display =
+    total > _AUDIT_PAGE ? 'inline-block' : 'none';
+  _auditOffset = events.length;
+}
+
+function _auditRows(events) {
+  return events.map(ev => {
+    const evCls = 'event-type-label ev-' + (ev.event_type || '').replace(/_/g, '-');
+    return `<tr>
+      <td class="ts-cell">${fmtTs(ev.timestamp)}</td>
+      <td><span class="${evCls}">${esc(ev.event_type || '')}</span></td>
+      <td>${esc(ev.recipient_email || '&mdash;')}</td>
+      <td>${esc(ev.actor || '')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ev.error_detail || '')}">${esc(ev.error_detail || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadMoreAudit() {
+  try {
+    const data = await fetchJSON(
+      `/api/email-events?limit=${_AUDIT_PAGE}&offset=${_auditOffset}`
+    );
+    const events = (data && data.events) || [];
+    const total = (data && data.total) || 0;
+    document.getElementById('audit-tbody').innerHTML += _auditRows(events);
+    _auditOffset += events.length;
+    document.getElementById('audit-load-more').style.display =
+      _auditOffset < total ? 'inline-block' : 'none';
+  } catch (_) {}
+}
+
 // ── XSS helper ────────────────────────────────────────────────────────────────
 
 function esc(str) {
@@ -485,17 +680,21 @@ function esc(str) {
 
 async function refresh() {
   try {
-    const [status, cycles, deals, quota] = await Promise.all([
+    const [status, cycles, deals, quota, emails, auditEvents] = await Promise.all([
       fetchJSON('/api/status'),
       fetchJSON('/api/cycles?limit=20'),
       fetchJSON(`/api/deals?status=${currentFilter}&limit=50`),
       fetchJSON('/api/quota'),
+      fetchJSON(`/api/emails?status=${currentEmailFilter}&limit=50`),
+      fetchJSON(`/api/email-events?limit=${_AUDIT_PAGE}`),
     ]);
     showOffline(false);
     renderStatus(status);
     renderCycles(cycles);
     renderDeals(deals);
     renderQuota(quota);
+    renderEmails(emails);
+    renderAudit(auditEvents);
     updateTimestamp();
   } catch (err) {
     showOffline(true);
