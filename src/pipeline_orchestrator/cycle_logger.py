@@ -35,9 +35,13 @@ class CycleLogger:
         notified: int,
         pending: int,
         errors: list[str],
+        emails_scheduled: int = 0,
+        emails_dispatched: int = 0,
+        emails_skipped: int = 0,
+        emails_failed: int = 0,
     ) -> None:
-        """Write one INFO-level JSON line with the six required fields."""
-        record = {
+        """Write one INFO-level JSON line. Email scheduling fields added when non-zero."""
+        record: dict = {
             "ts": ts,
             "emails_processed": emails_processed,
             "crm_logged": crm_logged,
@@ -45,4 +49,9 @@ class CycleLogger:
             "pending": pending,
             "errors": errors,
         }
+        if any((emails_scheduled, emails_dispatched, emails_skipped, emails_failed)):
+            record["emails_scheduled"] = emails_scheduled
+            record["emails_dispatched"] = emails_dispatched
+            record["emails_skipped"] = emails_skipped
+            record["emails_failed"] = emails_failed
         self._logger.info(json.dumps(record, separators=(",", ":")))

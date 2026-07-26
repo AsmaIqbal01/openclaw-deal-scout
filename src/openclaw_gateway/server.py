@@ -61,6 +61,12 @@ from openclaw_gateway.routes.api import (  # noqa: E402
     api_quota,
     api_run_cycle,
 )
+from openclaw_gateway.routes.email_api import (  # noqa: E402
+    api_approve_email,
+    api_cancel_email,
+    api_list_emails,
+    api_list_email_events,
+)
 
 mcp.custom_route("/", methods=["GET"])(serve_dashboard)
 mcp.custom_route("/api/status", methods=["GET"])(api_status)
@@ -68,3 +74,7 @@ mcp.custom_route("/api/cycles", methods=["GET"])(api_cycles)
 mcp.custom_route("/api/deals", methods=["GET"])(api_deals)
 mcp.custom_route("/api/quota", methods=["GET"])(api_quota)
 mcp.custom_route("/api/run-cycle", methods=["POST"])(api_run_cycle)
+mcp.custom_route("/api/emails", methods=["GET"])(api_list_emails)
+mcp.custom_route("/api/emails/{email_id}/approve", methods=["POST"])(api_approve_email)
+mcp.custom_route("/api/emails/{email_id}/cancel", methods=["POST"])(api_cancel_email)
+mcp.custom_route("/api/email-events", methods=["GET"])(api_list_email_events)

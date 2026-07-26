@@ -131,6 +131,10 @@ def run_cycle(config: PipelineConfig, cycle_logger: CycleLogger) -> None:
     crm_logged = 0
     notified = 0
     pending = 0
+    emails_scheduled = 0
+    emails_dispatched = 0
+    emails_skipped = 0
+    emails_failed = 0
 
     with CycleLock(config.lock_path, config.lock_timeout_minutes):
         try:
@@ -222,6 +226,55 @@ def run_cycle(config: PipelineConfig, cycle_logger: CycleLogger) -> None:
 
             pending = result2.get("crm_pending", 0) + result3.get("notify_pending", 0)
 
+            # ── Step 4a: Schedule emails for discord-notified deals ───────────
+            emails_scheduled = 0
+            try:
+                from email_scheduler import schedule_for_deal
+                for deal in result1.get("deals_extracted", []):
+                    deal_payload = {
+                        "gmail_message_id": deal.get("message_id"),
+                        "sender_email": deal.get("sender_email"),
+                        "sender_name": deal.get("sender_name"),
+                        "subject": deal.get("subject"),
+                        "company_name": deal.get("company_name"),
+                        "deal_summary": deal.get("summary"),
+                    }
+                    try:
+                        r = schedule_for_deal(deal_payload)
+                        if r.get("status") == "scheduled":
+                            emails_scheduled += 1
+                        elif r.get("status") == "error":
+                            logger.warning("step 4a scheduler-error: %s", r.get("reason"))
+                    except Exception:
+                        logger.exception(
+                            "step 4a: unhandled exception — scheduler did not honour no-raise contract"
+                        )
+            except ImportError:
+                logger.debug("step 4a: email_scheduler not available — skipping")
+            except SystemExit:
+                logger.warning("step 4a: email_scheduler config incomplete — scheduling skipped")
+            except Exception:
+                logger.exception("step 4a: unexpected error during email scheduling")
+
+            # ── Step 4b: Dispatch approved emails ─────────────────────────────
+            emails_dispatched = 0
+            emails_skipped = 0
+            emails_failed = 0
+            try:
+                from email_scheduler import dispatch_pending
+                result4b = dispatch_pending()
+                emails_dispatched = result4b.get("dispatched", 0)
+                emails_skipped = result4b.get("skipped", 0)
+                emails_failed = result4b.get("failed", 0)
+            except ImportError:
+                logger.debug("step 4b: email_scheduler not available — skipping")
+            except SystemExit:
+                logger.warning("step 4b: email_scheduler config incomplete — dispatch skipped")
+            except Exception:
+                logger.exception(
+                    "step 4b: unhandled exception — dispatch_pending did not honour no-raise contract"
+                )
+
         finally:
             cycle_logger.emit_cycle_summary(
                 ts=_utcnow_iso(),
@@ -230,4 +283,8 @@ def run_cycle(config: PipelineConfig, cycle_logger: CycleLogger) -> None:
                 notified=notified,
                 pending=pending,
                 errors=errors,
+                emails_scheduled=emails_scheduled,
+                emails_dispatched=emails_dispatched,
+                emails_skipped=emails_skipped,
+                emails_failed=emails_failed,
             )
