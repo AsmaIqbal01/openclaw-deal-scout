@@ -18,6 +18,8 @@ babysit it.**
 - **UK micro-businesses** (fewer than 10 employees) get inbound partnership
   and inquiry emails buried in a noisy inbox alongside spam and newsletters.
   There's no receptionist to triage them and no budget for a full CRM seat.
+  **5.5 million UK businesses have fewer than 10 employees — only ~50% use
+  any CRM, leaving 2.7 million with no systematic way to track inbound deals.**
 - **Pakistani SMBs and freelancers** selling into that market face the same
   problem from the other side, plus a harder constraint: **infrastructure
   cost is a direct barrier to adoption.** A paid CRM plan, a hosted database,
@@ -84,7 +86,7 @@ retry/backoff — it never aborts the whole cycle (see ADR-0003, ADR-0009).
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Python 3.11+ (3.12 for orchestration/gateway) | single runtime, no polyglot ops |
+| Language | Python 3.12 | single runtime, no polyglot ops |
 | Agent protocol | FastMCP (HTTP transport) | first-class MCP tool + custom REST routes in one server |
 | Deal classification | Gemini API (free tier) | no self-hosted model, no GPU |
 | CRM | HubSpot Free CRM (Private App token) | zero-cost CRM with a real API |
@@ -92,24 +94,23 @@ retry/backoff — it never aborts the whole cycle (see ADR-0003, ADR-0009).
 | Outbound email | Gmail API (send), not raw SMTP | reuses existing OAuth grant (ADR-0008) |
 | State store | Single JSON file (`processed_ids.json`, `email_queue.json`) | zero infrastructure, human-readable, survives reboots without a daemon (ADR-0002) |
 | Dashboard | Zero-build single HTML file, vanilla JS/CSS | no bundler, no node_modules in production (ADR-0007) |
-| Scheduling | In-process background thread, single process | no external cron/queue service (ADR-0005) |
+| Scheduling | In-process background thread + systemd timer | no external cron/queue service (ADR-0005) |
 | Tests | pytest + pytest-asyncio | unit + integration, run offline |
 
 ## How to run locally
 
 Also listed as a [ClawHub skill](https://clawhub.ai/skills/deal-scout)
-(`deal-scout`) with the same setup steps below — useful if you're driving
-this from an OpenClaw agent rather than a plain shell.
+(`deal-scout`) — useful if you're driving this from an OpenClaw agent rather
+than a plain shell.
 
-**Prerequisites:** Python 3.11+, a Gmail account, a free Gemini API key, a free
+**Prerequisites:** Python 3.12, a Gmail account, a free Gemini API key, a free
 HubSpot account, and a Discord server you can add a webhook to.
 
 ```bash
-# 1. Clone and install
+# 1. Clone and install (no virtualenv — system-wide python3.12)
 git clone https://github.com/AsmaIqbal01/openclaw-deal-scout.git
 cd openclaw-deal-scout
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[dev]" --break-system-packages
 
 # 2. Configure credentials
 cp .env.example .env
@@ -117,11 +118,11 @@ cp .env.example .env
 #          NOTIFIER=discord, DISCORD_WEBHOOK_URL
 
 # 3. Run the test suite (should be all green before you touch config)
-pytest -q
+python3.12 -m pytest -q
 
 # 4. Start the gateway (dashboard + scheduler + MCP tools)
-python -m openclaw_gateway
-# Gateway listens on http://127.0.0.1:18790 by default (GATEWAY_HOST/GATEWAY_PORT to override)
+python3.12 -m openclaw_gateway
+# Gateway listens on http://127.0.0.1:18790 by default
 
 # 5. Open the dashboard
 openclaw dashboard
@@ -141,12 +142,12 @@ Gmail intake, deal classification, HubSpot sync, Discord notification,
 pipeline orchestration, the MCP gateway/dashboard, and email scheduling.
 
 ```bash
-pytest -q
+python3.12 -m pytest -q
 ```
 
 ## Project status
 
-**7 features shipped, running in production for real operator inboxes:**
+**7 features shipped, running in production since July 2026:**
 
 | # | Feature | Status |
 |---|---|---|
@@ -161,6 +162,32 @@ pytest -q
 Each feature followed spec → plan → tasks → implementation, with an
 Architecture Decision Record for every cross-cutting design call.
 
+## Current scope (MVP)
+
+This is a working MVP running in production — not a prototype, not a demo.
+What's live today:
+
+- **Single channel** — Gmail only (intake + send)
+- **Single CRM** — HubSpot Free (zero-cost tier)
+- **Single notifier** — Discord webhook
+- **Local-only** — runs on operator's machine; no cloud infrastructure
+- **State store** — JSON flat-file; no database required
+
+These constraints are intentional: every dependency has a free tier sufficient
+for a real small business. The goal was to prove the model works at zero cost
+before adding infrastructure.
+
+**Production stats:** 489 tests passing · systemd timer scans every 15 min ·
+live on a real operator inbox since July 2026.
+
+## What's next
+
+- **Cloud-hosted version** — one-click Gmail connect, no terminal required
+- **SQLite migration** — when monthly deal volume exceeds 500
+- **Multi-operator support** — shared team inbox
+
+→ Interested in the beta? [dealclaw-vert.vercel.app](https://dealclaw-vert.vercel.app)
+
 ## Architecture Decision Records
 
 Full design rationale lives in [`history/adr/`](history/adr/):
@@ -174,9 +201,6 @@ Full design rationale lives in [`history/adr/`](history/adr/):
 - [ADR-0007](history/adr/0007-zero-build-single-file-dashboard-strategy.md) — Zero-build single-file dashboard strategy
 - [ADR-0008](history/adr/0008-gmail-api-send-vs-raw-smtp-for-outbound-email.md) — Gmail API send vs. raw SMTP for outbound email
 - [ADR-0009](history/adr/0009-email-dispatch-threading-model-in-process-synchronous-dispatch.md) — Email dispatch threading model: in-process synchronous dispatch
-
-## 🌐 Landing Page
-[dealclaw-vert.vercel.app](https://dealclaw-vert.vercel.app/) — public landing page for beta signups
 
 ## License
 
