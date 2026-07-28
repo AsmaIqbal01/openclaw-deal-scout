@@ -97,6 +97,10 @@ retry/backoff — it never aborts the whole cycle (see ADR-0003, ADR-0009).
 
 ## How to run locally
 
+Also listed as a [ClawHub skill](https://clawhub.ai/skills/deal-scout)
+(`deal-scout`) with the same setup steps below — useful if you're driving
+this from an OpenClaw agent rather than a plain shell.
+
 **Prerequisites:** Python 3.11+, a Gmail account, a free Gemini API key, a free
 HubSpot account, and a Discord server you can add a webhook to.
 
