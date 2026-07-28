@@ -178,7 +178,7 @@ async def check_new_deals_handler() -> dict:
                     skipped_count += 1
                     continue
 
-                if not classification.is_deal or classification.confidence_score < 0.5:
+                if not classification.is_deal or classification.confidence_score < 0.85:
                     logger.info("deal classified as not_a_deal: %s", msg_id)
                     append_message(
                         state_store_path,

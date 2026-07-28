@@ -56,6 +56,37 @@ Classification rules:
 5. deal_summary must be exactly 1-2 sentences describing the opportunity. No more.
 6. raw_email_excerpt must be a verbatim short excerpt from the body (max 500 characters, ending at a word boundary) most relevant to the deal. Not a summary — a direct quote.
 7. deal_category must be exactly one of: lead, partnership_inquiry, vendor_offer, rfq, other.
+
+---
+STRICT REJECTION RULES (check before scoring confidence):
+
+Classify is_deal=false immediately if ANY of these match:
+- Sender address contains: noreply@, newsletters-noreply@, digest@, no-reply@
+- Email body contains the word 'unsubscribe'
+- Email is a broadcast/digest (LinkedIn Newsletter, Substack, etc.)
+- No personalized mention of the recipient's business by name or specific context
+
+If any rule matches, set is_deal=false and confidence_score=0.0, skip remaining analysis.
+
+EXAMPLE MESSAGES — use these as ground truth for classification:
+
+❌ NOT A DEAL (is_deal=false, confidence=0.0):
+Subject: 'GenAI Works is offering micro-businesses AI tools to feature their products'
+From: newsletters-noreply@linkedin.com
+Reason: mass LinkedIn newsletter, unsubscribe link present, no direct recipient mention
+
+❌ NOT A DEAL (is_deal=false, confidence=0.0):
+Subject: 'Weekly AI News Roundup — top 10 stories'
+From: digest@spideybot.discord
+Reason: automated digest/notification, not a business opportunity directed at recipient
+
+✅ IS A DEAL (is_deal=true, confidence>=0.85):
+Subject: 'Partnership inquiry for your AI automation services'
+From: john.smith@acmeltd.co.uk
+Body: 'Hi, I found your profile and I'm looking for someone to automate our invoicing workflow. Can we get on a call this week?'
+Reason: direct, personalized, names a specific need, sent to this recipient specifically
+---
+
 8. All five fields are required in your response even when is_deal=false.
 
 Respond with a JSON object only. No prose. No markdown fences.
