@@ -18,16 +18,14 @@ def run_cycle() -> dict:
     captured: dict = {}
 
     class _CapturingLogger(CycleLogger):
-        def emit_cycle_summary(
-            self, *, ts, emails_processed, crm_logged, notified, pending, errors
-        ):
+        def emit_cycle_summary(self, *, ts, emails_processed, crm_logged, notified, pending, errors, **kwargs):
             super().emit_cycle_summary(
                 ts=ts, emails_processed=emails_processed, crm_logged=crm_logged,
-                notified=notified, pending=pending, errors=errors,
+                notified=notified, pending=pending, errors=errors, **kwargs,
             )
             captured.update(
                 ts=ts, emails_processed=emails_processed, crm_logged=crm_logged,
-                notified=notified, pending=pending, errors=errors,
+                notified=notified, pending=pending, errors=errors, **kwargs,
             )
 
     cycle_logger = _CapturingLogger(config)
