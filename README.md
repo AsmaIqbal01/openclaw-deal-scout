@@ -175,6 +175,9 @@ Full design rationale lives in [`history/adr/`](history/adr/):
 - [ADR-0008](history/adr/0008-gmail-api-send-vs-raw-smtp-for-outbound-email.md) — Gmail API send vs. raw SMTP for outbound email
 - [ADR-0009](history/adr/0009-email-dispatch-threading-model-in-process-synchronous-dispatch.md) — Email dispatch threading model: in-process synchronous dispatch
 
+## 🌐 Landing Page
+[dealclaw-vert.vercel.app](https://dealclaw-vert.vercel.app/) — public landing page for beta signups
+
 ## License
 
 Proprietary — all rights reserved unless a license file states otherwise.
