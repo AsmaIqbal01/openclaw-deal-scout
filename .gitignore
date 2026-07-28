@@ -22,3 +22,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 email_queue.json
+email_queue.json
