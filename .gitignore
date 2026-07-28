@@ -21,3 +21,4 @@ C:Users*
 __pycache__/
 *.pyc
 .pytest_cache/
+email_queue.json
