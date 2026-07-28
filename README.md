@@ -132,7 +132,7 @@ inspect what happened without touching the JSON files directly.
 
 ## Test suite
 
-**482 passing, 9 skipped, 498 total** — unit + integration coverage across
+**489 passing, 9 skipped, 498 total** — unit + integration coverage across
 Gmail intake, deal classification, HubSpot sync, Discord notification,
 pipeline orchestration, the MCP gateway/dashboard, and email scheduling.
 
