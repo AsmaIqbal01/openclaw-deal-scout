@@ -1,3 +1,5 @@
+"This project has graduated to a vertical-specific product. See openclaw-deal-scout-realestate for the active development."
+
 # OpenClaw Deal Scout
 
 **Autonomous inbox-to-CRM deal pipeline for solo operators — zero infrastructure, zero monthly bill.**
