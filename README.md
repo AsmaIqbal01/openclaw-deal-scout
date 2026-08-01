@@ -1,4 +1,4 @@
-"Deal Scout Real Estate —  ## Status: Active Development — Phase 1
+"upgraded to Deal Scout Real Estate —  ## Status: Active Development — Phase 1
 Building vertical-specific pipeline for PK real estate agents.
 Spec-driven development. Min 9.6/10 spec score before every build.
 Target: 3 PK pilot agencies by [10/08/2025]."
