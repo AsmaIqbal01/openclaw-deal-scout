@@ -1,4 +1,4 @@
-"This project has graduated to a vertical-specific product. See openclaw-deal-scout-realestate for the active development."
+"This project has graduated to a vertical-specific product. See -openclaw-deal-scout-realestate for the active development."
 
 # OpenClaw Deal Scout
 
