@@ -44,11 +44,13 @@ def _get_env() -> dict:
         raise EnvironmentError("GEMINI_API_KEY is not set")
     state_store_path = os.environ.get("STATE_STORE_PATH") or "./data/processed_ids.json"
     max_messages = int(os.environ.get("MAX_MESSAGES_PER_POLL") or "50")
+    target_segment = os.environ.get("TARGET_SEGMENT") or "small businesses, fewer than 10 employees"
     return {
         "credentials_path": credentials_path,
         "api_key": api_key,
         "state_store_path": state_store_path,
         "max_messages": max_messages,
+        "target_segment": target_segment,
     }
 
 
@@ -149,6 +151,7 @@ async def check_new_deals_handler() -> dict:
                     sender_email=metadata["sender_email"],
                     sender_name=metadata["sender_name"],
                     body_excerpt=body[:_BODY_EXCERPT_CAP],
+                    target_segment=env["target_segment"],
                 )
 
                 try:

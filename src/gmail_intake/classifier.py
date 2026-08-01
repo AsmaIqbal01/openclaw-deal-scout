@@ -36,9 +36,9 @@ _RESPONSE_SCHEMA = {
     ],
 }
 
-_PROMPT_TEMPLATE = """You are a business deal classifier for an automated email assistant serving UK micro-businesses (fewer than 10 employees).
+_PROMPT_TEMPLATE = """You are a business deal classifier for an automated email assistant serving {target_segment}.
 
-Analyse the following email and determine whether it represents a genuine business deal opportunity — such as a sales lead, partnership inquiry, vendor quote request, or RFQ — directed at a UK micro-business.
+Analyse the following email and determine whether it represents a genuine business deal opportunity — such as a sales lead, partnership inquiry, vendor quote request, or RFQ — directed at this business.
 
 Email details:
 Subject: {subject}
@@ -61,30 +61,45 @@ Classification rules:
 STRICT REJECTION RULES (check before scoring confidence):
 
 Classify is_deal=false immediately if ANY of these match:
-- Sender address contains: noreply@, newsletters-noreply@, digest@, no-reply@
-- Email body contains the word 'unsubscribe'
-- Email is a broadcast/digest (LinkedIn Newsletter, Substack, etc.)
-- No personalized mention of the recipient's business by name or specific context
+- Sender address contains: noreply@, newsletters-noreply@, digest@, no-reply@ AND the email contains no specific actionable opportunity (no named counterparty, no contact details, no concrete terms/price)
+- Email body contains the word 'unsubscribe' AND is a mass newsletter/content digest (news roundup, article digest, promotional roundup)
+- Email is a broadcast/digest of NEWS or CONTENT (LinkedIn Newsletter, Substack, "roundup", "weekly news") with no specific transactional opportunity
+- Generic marketing/promo email with no specific counterparty, product, price, or contact info
 
-If any rule matches, set is_deal=false and confidence_score=0.0, skip remaining analysis.
+HARD BLOCK LIST (always confidence_score=0.0, is_deal=false, no exceptions, skip remaining analysis):
+- Newsletters/content emails from: Anthropic, GitHub, LinkedIn, Substack, Medium (by sender domain or brand name in From/subject)
+- Promotional/marketing emails (discounts, sales, "% off", course/product promos)
+- Brand offer emails (a company pitching its own product/service to a mass list, not a specific counterparty pitching a deal to this recipient)
+- Automated *system/service* notification emails with no business-lead content (account alerts, deployment/build status, app "tips", group-join confirmations, social network invitations)
+- Any email containing the word 'unsubscribe'
+
+Do NOT reject an email solely because it is auto-generated (e.g. a saved-search or listing alert). If an automated email surfaces a SPECIFIC actionable business opportunity — a named counterparty, contact details (phone/email), and concrete terms (price, product, property) — it is NOT covered by the "automated notification" block above; treat it like any other lead and score it on its merits instead of auto-rejecting it.
+
+If a rejection rule matches, set is_deal=false and confidence_score=0.0, skip remaining analysis.
 
 EXAMPLE MESSAGES — use these as ground truth for classification:
 
 ❌ NOT A DEAL (is_deal=false, confidence=0.0):
 Subject: 'GenAI Works is offering micro-businesses AI tools to feature their products'
 From: newsletters-noreply@linkedin.com
-Reason: mass LinkedIn newsletter, unsubscribe link present, no direct recipient mention
+Reason: mass LinkedIn newsletter, unsubscribe link present, no direct recipient mention, no specific counterparty or terms
 
 ❌ NOT A DEAL (is_deal=false, confidence=0.0):
 Subject: 'Weekly AI News Roundup — top 10 stories'
 From: digest@spideybot.discord
-Reason: automated digest/notification, not a business opportunity directed at recipient
+Reason: automated news/content digest, not a business opportunity, no counterparty or terms
 
 ✅ IS A DEAL (is_deal=true, confidence>=0.85):
 Subject: 'Partnership inquiry for your AI automation services'
 From: john.smith@acmeltd.co.uk
 Body: 'Hi, I found your profile and I'm looking for someone to automate our invoicing workflow. Can we get on a call this week?'
 Reason: direct, personalized, names a specific need, sent to this recipient specifically
+
+✅ IS A DEAL (is_deal=true, confidence>=0.85):
+Subject: 'New Property Alert — 10 Marla House for Sale in DHA Phase 6, Lahore'
+From: alerts@zameen.com
+Body: 'A new property matching your saved search has been listed... Seller Contact: Name: Usman Afzal Malik, Phone: 0300-1234567... Owner motivated to sell quickly.'
+Reason: automated listing alert, but names a specific property, price, and seller with contact details — an actionable lead for a real estate business, not generic marketing
 ---
 
 8. All five fields are required in your response even when is_deal=false.

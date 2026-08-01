@@ -85,7 +85,7 @@ class ClassificationRequest:
     sender_email:   str
     sender_name:    str | None
     body_excerpt:   str | None                # Capped at 8,000 chars; None if body absent
-    target_segment: str = "UK micro-business, fewer than 10 employees"
+    target_segment: str = "small businesses, fewer than 10 employees"  # overridden via TARGET_SEGMENT env var
 
 
 @dataclass
