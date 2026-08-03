@@ -4,6 +4,9 @@
 
 ## Status: Production ✅
 
+## Demo
+▶️ [Watch live pipeline demo](https://youtube.com/shorts/ZtWuZAr5KUs?si=arSFTtL8kxe2W3Ac)
+
 - 489 tests passing
 - 7 features shipped and running
 - Pipeline: Gmail → Gemini 2.5 Flash → HubSpot CRM → Discord
